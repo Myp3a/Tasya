@@ -21,8 +21,8 @@ class MyClient(discord.Client):
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
 
-    async def setup_hook(self):
-        await self.tree.sync()
+    #async def setup_hook(self):
+        #await self.tree.sync()
 
 
 client = MyClient()
@@ -76,9 +76,29 @@ class GaymeDropdown(discord.ui.Select):
         view.add_item(GaymeRejectButton(row=1))
         view.add_item(GaymePingButton(row=2))
         await interaction.response.edit_message(embed=self.view.embed,view=self.view)
+        view.message = await interaction.original_response()
 
-def generate_embed(view):
+
+class GaymeView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=3600)
+        self.add_item(GaymeDropdown())
+        self.gayme_name = None
+        self.gayme_id = None
+        self.embed = discord.Embed()
+        gayme_count = None
+        self.accepted = []
+        self.rejected = []
+        self.notdecided = []
+        self.message = None
+
+    async def on_timeout(self):
+        self.clear_items().stop()
+        await self.message.edit(view=self)
+
+def generate_embed(view: GaymeView):
     embed: discord.Embed = view.embed
+    embed.title = view.gayme_name
     embed.remove_field(0)
     embed.insert_field_at(0,name="Игроки: ",value=f"{len(view.accepted)}/{view.gayme_count}",inline=False)
     embed.remove_field(1)
@@ -176,18 +196,6 @@ class GaymeMaybeButton(discord.ui.Button):
         view.notdecided.append(user.id)
         embed = generate_embed(view)
         await interaction.response.edit_message(embed=embed)
-
-class GaymeView(discord.ui.View):
-    def __init__(self):
-        super().__init__()
-        self.add_item(GaymeDropdown())
-        self.gayme_name = None
-        self.gayme_id = None
-        self.embed = discord.Embed()
-        gayme_count = None
-        self.accepted = []
-        self.rejected = []
-        self.notdecided = []
 
 
 @client.tree.command()
