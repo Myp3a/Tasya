@@ -43,7 +43,7 @@ class GaymeDropdown(discord.ui.Select):
         view.add_item(GaymeMaybeButton(row=1))
         view.add_item(GaymeRejectButton(row=1))
         view.add_item(GaymePingButton(row=2))
-        await interaction.response.edit_message(embed=self.view.embed,view=self.view)
+        await interaction.response.edit_message(content=f"<@&{view.gaymes[view.gayme_id].role}> - собираемся!",embed=self.view.embed,view=self.view)
         view.message = await interaction.original_response()
 
 
