@@ -1,44 +1,42 @@
 import discord
 from enum import Enum
 import datetime
+import sqlite3
 
-#temp until DB
-class Gaymes(Enum):
-    csgo = 0
-    dota = 1
-    warcraft = 2
-    necropolis = 3
-    amogus = 4
-    minecraft = 5
-gaymes_names = {
-    0: "Counter-Strike: Global Offensive",
-    1: "Dota 2",
-    2: "Warcraft 3",
-    3: "Necropolis",
-    4: "Among Us",
-    5: "Minecraft"
-}
-gaymes_counts = {
-    0: 5,
-    1: 5,
-    2: 2,
-    3: 4,
-    4: 4,
-    5: 2
-}
+conn = sqlite3.connect("data.db")
+with conn:
+    conn.execute("""CREATE TABLE IF NOT EXISTS gaymes (
+        name string UNIQUE NOT NULL,
+        players int,
+        role int
+    );""")
+
+class Gayme:
+    def __init__(self,id,name,count,role):
+        self.id = id - 1
+        self.name = name
+        self.count = count
+        self.role = role
+    
+    def __str__(self):
+        return f"{self.id}: \"{self.name}\" ({self.count} players)"
+    
+    def __repr__(self):
+        return f"<Gayme: '{self.__str__()}'>"
 
 class GaymeDropdown(discord.ui.Select):
-    def __init__(self):
+    def __init__(self,gaymes):
+        super().__init__(placeholder='Выбери игру', min_values=1, max_values=1)
         options = []
-        for gayme in Gaymes:
-            options.append(discord.SelectOption(label=gaymes_names[gayme.value])) 
-        super().__init__(placeholder='Выбери игру', min_values=1, max_values=1, options=options)
+        for gayme in gaymes:
+            options.append(discord.SelectOption(label=gayme.name)) 
+        self.options=options
     
     async def callback(self, interaction: discord.Interaction):
         view: GaymeView = self.view
-        view.gayme_name = self.values[0]
-        view.gayme_id = list(gaymes_names.keys())[list(gaymes_names.values()).index(view.gayme_name)]
-        view.gayme_count = gaymes_counts[view.gayme_id]
+        for gayme in view.gaymes:
+            if gayme.name == self.values[0]:
+                view.gayme_id = gayme.id
         view.embed = generate_embed(view)
         view.remove_item(self)
         view.add_item(GaymeAcceptButton(row=1))
@@ -52,11 +50,12 @@ class GaymeDropdown(discord.ui.Select):
 class GaymeView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=3600)
-        self.add_item(GaymeDropdown())
-        self.gayme_name = None
+        self.gaymes = []
+        for res in conn.execute("SELECT rowid, name, players, role FROM gaymes"):
+            self.gaymes.append(Gayme(*res))
+        self.add_item(GaymeDropdown(self.gaymes))
         self.gayme_id = None
         self.embed = discord.Embed()
-        gayme_count = None
         self.accepted = []
         self.rejected = []
         self.notdecided = []
@@ -71,6 +70,9 @@ class GaymePingButton(discord.ui.Button):
         super().__init__(style=discord.ButtonStyle.primary,label="Труба зовет!",row=row)
 
     async def callback(self, interaction: discord.Interaction):
+        if len(self.view.accepted) < self.view.gaymes[self.view.gayme_id].count:
+            await interaction.response.send_message(content="Нас мало, куда трубить?",ephemeral=True,delete_after=10)
+            return
         ping_string = ""
         for id in self.view.accepted:
             ping_string += f"<@{id}> "
@@ -133,9 +135,10 @@ class GaymeMaybeButton(discord.ui.Button):
 
 def generate_embed(view: GaymeView):
     embed: discord.Embed = view.embed
-    embed.title = view.gayme_name
+    gayme: Gayme = view.gaymes[view.gayme_id]
+    embed.title = gayme.name
     embed.remove_field(0)
-    embed.insert_field_at(0,name="Игроки: ",value=f"{len(view.accepted)}/{view.gayme_count}",inline=False)
+    embed.insert_field_at(0,name="Игроки: ",value=f"{len(view.accepted)}/{gayme.count}",inline=False)
     embed.remove_field(1)
     accepted_value = ""
     for id in view.accepted:
@@ -160,9 +163,17 @@ def generate_embed(view: GaymeView):
     if thonk_value == "":
         thonk_value = "Пусто!"
     embed.insert_field_at(3,name="Не определились",value=thonk_value,inline=False)
-    if len(view.accepted) >= view.gayme_count:
+    if len(view.accepted) >= gayme.count:
         embed.color = discord.Color.green()
     else:
         embed.color = discord.Color.red()
     embed.set_footer(text=f"Последнее обновление: {datetime.datetime.now().isoformat(timespec='minutes').replace('T', ' ')}")
     return embed
+
+def add_gayme(name, count, role):
+    try:
+        with conn:
+            conn.execute("INSERT INTO gaymes(name, players, role) VALUES (?, ?, ?)",(name, count, role))
+        return True
+    except:
+        return False
