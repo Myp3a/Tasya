@@ -8,7 +8,8 @@ with conn:
     conn.execute("""CREATE TABLE IF NOT EXISTS gaymes (
         name string UNIQUE NOT NULL,
         players int,
-        role int
+        role int,
+        server int
     );""")
 
 class Gayme:
@@ -36,25 +37,27 @@ class GaymeDropdown(discord.ui.Select):
         view: GaymeView = self.view
         for gayme in view.gaymes:
             if gayme.name == self.values[0]:
-                view.gayme_id = gayme.id
+                view.gayme = gayme
         view.embed = generate_embed(view)
         view.remove_item(self)
         view.add_item(GaymeAcceptButton(row=1))
         view.add_item(GaymeMaybeButton(row=1))
         view.add_item(GaymeRejectButton(row=1))
         view.add_item(GaymePingButton(row=2))
-        await interaction.response.edit_message(content=f"<@&{view.gaymes[view.gayme_id].role}> - собираемся!",embed=self.view.embed,view=self.view)
+        await interaction.response.edit_message(embed=self.view.embed,view=self.view)
+        await interaction.channel.send(content=f"<@&{view.gayme.role}> - собираемся!")
         view.message = await interaction.original_response()
 
 
 class GaymeView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, guild_id):
         super().__init__(timeout=3600)
+        self.guild = guild_id
         self.gaymes = []
-        for res in conn.execute("SELECT rowid, name, players, role FROM gaymes"):
+        for res in conn.execute("SELECT rowid, name, players, role FROM gaymes WHERE server = ?",(self.guild,)):
             self.gaymes.append(Gayme(*res))
         self.add_item(GaymeDropdown(self.gaymes))
-        self.gayme_id = None
+        self.gayme = None
         self.embed = discord.Embed()
         self.accepted = []
         self.rejected = []
@@ -70,7 +73,7 @@ class GaymePingButton(discord.ui.Button):
         super().__init__(style=discord.ButtonStyle.primary,label="Труба зовет!",row=row)
 
     async def callback(self, interaction: discord.Interaction):
-        if len(self.view.accepted) < self.view.gaymes[self.view.gayme_id].count:
+        if len(self.view.accepted) < self.view.gayme.count:
             await interaction.response.send_message(content="Нас мало, куда трубить?",ephemeral=True,delete_after=10)
             return
         ping_string = ""
@@ -135,7 +138,7 @@ class GaymeMaybeButton(discord.ui.Button):
 
 def generate_embed(view: GaymeView):
     embed: discord.Embed = view.embed
-    gayme: Gayme = view.gaymes[view.gayme_id]
+    gayme: Gayme = view.gayme
     embed.title = gayme.name
     embed.remove_field(0)
     embed.insert_field_at(0,name="Игроки: ",value=f"{len(view.accepted)}/{gayme.count}",inline=False)
@@ -170,10 +173,10 @@ def generate_embed(view: GaymeView):
     embed.set_footer(text=f"Последнее обновление: {datetime.datetime.now().isoformat(timespec='minutes').replace('T', ' ')}")
     return embed
 
-def add_gayme(name, count, role):
+def add_gayme(name, count, role, guild):
     try:
         with conn:
-            conn.execute("INSERT INTO gaymes(name, players, role) VALUES (?, ?, ?)",(name, count, role))
+            conn.execute("INSERT INTO gaymes(name, players, role, server) VALUES (?, ?, ?, ?)",(name, count, role, guild))
         return True
     except:
         return False

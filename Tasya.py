@@ -39,14 +39,17 @@ async def on_ready():
 @client.tree.command()
 async def gayme(interaction: discord.Interaction):
     """Поиграть с друзьяшками"""
-    view = GaymeView()
-    await interaction.response.send_message(view=view)
+    view = GaymeView(interaction.guild_id)
+    if len(view.gaymes) == 0:
+        await interaction.response.send_message(content="Сначала добавь хоть одну игру!")
+    else:
+        await interaction.response.send_message(view=view)
 
 @client.tree.command()
 @app_commands.describe(name="Название игры", player_count="Необходимое количество игроков", role="Роль, которую пингуем при сборе")
 async def gaymeadd(interaction: discord.Interaction, name: str, player_count: app_commands.Range[int, 2, 20], role: discord.Role):
     """Добавить новую игру в список"""
-    res = add_gayme(name, player_count, role.id)
+    res = add_gayme(name, player_count, role.id, interaction.guild_id)
     if res:
         await interaction.response.send_message(content="Игра успешно добавлена!")
     else:
