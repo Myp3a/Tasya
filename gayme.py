@@ -6,7 +6,7 @@ import sqlite3
 conn = sqlite3.connect("data.db")
 with conn:
     conn.execute("""CREATE TABLE IF NOT EXISTS gaymes (
-        name string UNIQUE NOT NULL,
+        name string NOT NULL,
         players int,
         role int,
         server int
