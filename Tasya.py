@@ -47,9 +47,13 @@ async def gayme(interaction: discord.Interaction):
 
 @client.tree.command()
 @app_commands.describe(name="Название игры", player_count="Необходимое количество игроков", role="Роль, которую пингуем при сборе")
-async def gaymeadd(interaction: discord.Interaction, name: str, player_count: app_commands.Range[int, 2, 20], role: discord.Role):
+async def gaymeadd(interaction: discord.Interaction, name: str, player_count: app_commands.Range[int, 2, 20], role: discord.Role = None):
     """Добавить новую игру в список"""
-    res = add_gayme(name, player_count, role.id, interaction.guild_id)
+    if role is None:
+        roleid = None
+    else:
+        roleid = role.id
+    res = add_gayme(name, player_count, roleid, interaction.guild_id)
     if res:
         await interaction.response.send_message(content="Игра успешно добавлена!")
     else:

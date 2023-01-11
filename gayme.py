@@ -45,7 +45,8 @@ class GaymeDropdown(discord.ui.Select):
         view.add_item(GaymeRejectButton(row=1))
         view.add_item(GaymePingButton(row=2))
         await interaction.response.edit_message(embed=self.view.embed,view=self.view)
-        await interaction.channel.send(content=f"<@&{view.gayme.role}> - собираемся!")
+        if gayme.role is not None:
+            await interaction.channel.send(content=f"<@&{view.gayme.role}> - собираемся!")
         view.message = await interaction.original_response()
 
 
