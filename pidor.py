@@ -256,8 +256,8 @@ def gay_stats(guild, period):
     gay_list = ""
     count_list = ""
     for gay in gays:
-        gay_list += f"<@{gay[0]}>"
-        count_list += f"{gay[1]} {random.choice(gay_texts)}"
+        gay_list += f"<@{gay[0]}>\n"
+        count_list += f"{gay[1]} {random.choice(gay_texts)}\n"
     embed.add_field(name="Пидоры",value=gay_list,inline=True)
     embed.add_field(name="Количество",value=count_list,inline=True)
     return embed
