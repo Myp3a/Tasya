@@ -186,7 +186,8 @@ def add_gayme(name, count, role, guild):
                 cnt += 1
             if cnt > 0:
                 return False
-            conn.execute("INSERT INTO gaymes(name, players, role, server) VALUES (?, ?, ?, ?)",(name, count, role, guild))
+            with conn:
+                conn.execute("INSERT INTO gaymes(name, players, role, server) VALUES (?, ?, ?, ?)",(name, count, role, guild))
         return True
     except:
         return False
@@ -199,7 +200,8 @@ def edit_gayme(name, guild, count = 2, role = None):
                 cnt += 1
             if cnt == 0:
                 return False
-            conn.execute("UPDATE gaymes SET players=?, role=? WHERE server=? AND name=?",(count, role, guild, name))
+            with conn:
+                conn.execute("UPDATE gaymes SET players=?, role=? WHERE server=? AND name=?",(count, role, guild, name))
         return True
     except:
         return False

@@ -13,6 +13,7 @@ import discord
 from discord import app_commands
 
 from gayme import GaymeView, add_gayme, edit_gayme, get_gaymes
+from pidor import select_gay, gay_stats
 
 coloredlogs.install(level='INFO',fmt='[{asctime}] [{levelname:<8}] {name}: {message}', style='{', datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -20,6 +21,7 @@ class MyClient(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
+        intents.members = True
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
 
@@ -82,5 +84,18 @@ async def gaymeedit(interaction: discord.Interaction, name: str, player_count: a
         await interaction.response.send_message(content="Игра успешно обновлена!")
     else:
         await interaction.response.send_message(content="Ошибка при обновлении.")
+
+@client.tree.command()
+@app_commands.describe(period="Период статистики")
+async def pidor(interaction: discord.Interaction, period: Literal["Месяц", "Год", "Все время"] = None):
+    """Выборы, выборы - кандидаты - пидоры!"""
+    if period is None:
+        res = select_gay(interaction.guild)
+        await interaction.response.send_message(content=res[0])
+        for msg in res[1:]:
+            await interaction.channel.send(msg)
+    else:
+        res = gay_stats(interaction.guild, period)
+        await interaction.response.send_message(embed=res)
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())
