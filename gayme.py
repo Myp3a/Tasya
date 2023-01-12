@@ -23,7 +23,7 @@ class Gayme:
         return f"{self.id}: \"{self.name}\" ({self.count} players)"
     
     def __repr__(self):
-        return f"<Gayme: '{self.__str__()}'>"
+        return f"<Gayme: '{self.__str__()}' pings={self.role}>"
 
 class GaymeDropdown(discord.ui.Select):
     def __init__(self,gaymes):
@@ -45,7 +45,7 @@ class GaymeDropdown(discord.ui.Select):
         view.add_item(GaymeRejectButton(row=1))
         view.add_item(GaymePingButton(row=2))
         await interaction.response.edit_message(embed=self.view.embed,view=self.view)
-        if gayme.role is not None:
+        if view.gayme.role is not None:
             await interaction.channel.send(content=f"<@&{view.gayme.role}> - собираемся!")
         view.message = await interaction.original_response()
 
@@ -54,9 +54,7 @@ class GaymeView(discord.ui.View):
     def __init__(self, guild_id):
         super().__init__(timeout=3600)
         self.guild = guild_id
-        self.gaymes = []
-        for res in conn.execute("SELECT rowid, name, players, role FROM gaymes WHERE server = ?",(self.guild,)):
-            self.gaymes.append(Gayme(*res))
+        self.gaymes = get_gaymes(guild_id)
         self.add_item(GaymeDropdown(self.gaymes))
         self.gayme = None
         self.embed = discord.Embed()
@@ -174,10 +172,34 @@ def generate_embed(view: GaymeView):
     embed.set_footer(text=f"Последнее обновление: {datetime.datetime.now().isoformat(timespec='minutes').replace('T', ' ')}")
     return embed
 
+def get_gaymes(guild):
+    gaymes = []
+    for res in conn.execute("SELECT rowid, name, players, role FROM gaymes WHERE server = ?",(guild,)):
+        gaymes.append(Gayme(*res))
+    return gaymes
+
 def add_gayme(name, count, role, guild):
     try:
         with conn:
+            cnt = 0
+            for res in conn.execute("SELECT name FROM gaymes WHERE server=? AND name=?",(guild,name)):
+                cnt += 1
+            if cnt > 0:
+                return False
             conn.execute("INSERT INTO gaymes(name, players, role, server) VALUES (?, ?, ?, ?)",(name, count, role, guild))
+        return True
+    except:
+        return False
+
+def edit_gayme(name, guild, count = 2, role = None):
+    try:
+        with conn:
+            cnt = 0
+            for res in conn.execute("SELECT name FROM gaymes WHERE server=? AND name=?",(guild,name)):
+                cnt += 1
+            if cnt == 0:
+                return False
+            conn.execute("UPDATE gaymes SET players=?, role=? WHERE server=? AND name=?",(count, role, guild, name))
         return True
     except:
         return False
