@@ -246,6 +246,7 @@ def gay_stats(guild, period):
                                         GROUP BY user_id 
                                         ORDER BY count(user_id) DESC""",(guild.id,)):
                 gays.append(gay)
+    embeds = []
     embed = discord.Embed()
     embed.title = random.choice(titles)
     if gays == []:
@@ -258,6 +259,16 @@ def gay_stats(guild, period):
     for gay in gays:
         gay_list += f"<@{gay[0]}>\n"
         count_list += f"{gay[1]} {random.choice(gay_texts)}\n"
+        if len(gay_list) > 950 or len(count_list) > 950:
+            embed.add_field(name="Пидоры",value=gay_list,inline=True)
+            embed.add_field(name="Количество",value=count_list,inline=True)
+            embeds.append(embed)
+            embed = discord.Embed()
+            embed.title = "У-у-у, пидорасы, не влезли"
+            embed.color = discord.Color.blue()
+            gay_list = ""
+            count_list = ""
+    embeds.append(embed)
     embed.add_field(name="Пидоры",value=gay_list,inline=True)
     embed.add_field(name="Количество",value=count_list,inline=True)
-    return embed
+    return embeds

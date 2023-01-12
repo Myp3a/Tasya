@@ -96,6 +96,6 @@ async def pidor(interaction: discord.Interaction, period: Literal["Месяц", 
             await interaction.channel.send(msg)
     else:
         res = gay_stats(interaction.guild, period)
-        await interaction.response.send_message(embed=res)
+        await interaction.response.send_message(embeds=res)
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())
