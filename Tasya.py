@@ -13,7 +13,7 @@ import discord
 from discord import app_commands
 
 from gayme import GaymeView, add_gayme, edit_gayme, get_gaymes
-from pidor import select_gay, gay_stats
+from pidor import select_gay, gay_stats, set_gay_role
 
 coloredlogs.install(level='INFO',fmt='[{asctime}] [{levelname:<8}] {name}: {message}', style='{', datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -90,12 +90,24 @@ async def gaymeedit(interaction: discord.Interaction, name: str, player_count: a
 async def pidor(interaction: discord.Interaction, period: Literal["Месяц", "Год", "Все время"] = None):
     """Выборы, выборы - кандидаты - пидоры!"""
     if period is None:
-        res = select_gay(interaction.guild)
+        res = await select_gay(interaction.guild)
         await interaction.response.send_message(content=res[0])
         for msg in res[1:]:
             await interaction.channel.send(msg)
     else:
         res = gay_stats(interaction.guild, period)
         await interaction.response.send_message(embeds=res)
+
+@client.tree.command()
+@app_commands.describe(role="Роль для пидора")
+async def pidorrole(interaction: discord.Interaction, role: discord.Role = None):
+    """Званием пидора объявляется..."""
+    if set_gay_role(interaction.guild, role):
+        if role is None:
+            await interaction.response.send_message(content=f"Роль удалена.")
+        else:
+            await interaction.response.send_message(content=f"Роль изменена на {role.mention}")
+    else:
+        await interaction.response.send_message(content="Ошибка выполнения.")
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())

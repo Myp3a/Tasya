@@ -12,8 +12,12 @@ with conn:
         year int NOT NULL,
         server int NOT NULL
     );""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS gay_config (
+        server int NOT NULL UNIQUE,
+        role int NOT NULL
+    );""")
 
-def select_gay(guild: discord.Guild):
+async def select_gay(guild: discord.Guild):
     # feat.:
     # https://github.com/AngryJKirk/familybot
     # @SublimeBot (TG)
@@ -169,6 +173,13 @@ def select_gay(guild: discord.Guild):
             return [random.choice(ranaway),]
         return [random.choice(already) + gay.mention,]
     gay = random.choice(members)
+    for res in conn.execute("SELECT role FROM gay_config WHERE server=?",(guild.id,)):
+        role_id = res[0]
+    gay_role = guild.get_role(role_id)
+    for member in members:
+        if gay_role in member.roles:
+            await member.remove_roles(gay_role)
+    await gay.add_roles(gay_role)
     res = [random.choice(line) for line in lines]
     res[3] += gay.mention
     with conn:
@@ -272,3 +283,12 @@ def gay_stats(guild, period):
     embed.add_field(name="Пидоры",value=gay_list,inline=True)
     embed.add_field(name="Количество",value=count_list,inline=True)
     return embeds
+
+def set_gay_role(guild, role):
+    try:
+        with conn:
+            conn.execute("INSERT OR IGNORE INTO gay_config VALUES (?,?)",(guild.id, role.id))
+            conn.execute("UPDATE gay_config SET role=? WHERE server=?",(role.id, guild.id))
+        return True
+    except:
+        return False
