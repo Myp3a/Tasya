@@ -14,6 +14,7 @@ from discord import app_commands
 
 from gayme import GaymeView, add_gayme, edit_gayme, get_gaymes
 from pidor import select_gay, gay_stats, set_gay_role
+from music import MusicController
 
 coloredlogs.install(level='INFO',fmt='[{asctime}] [{levelname:<8}] {name}: {message}', style='{', datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -24,6 +25,7 @@ class MyClient(discord.Client):
         intents.members = True
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
+        self.music = MusicController()
 
     async def setup_hook(self):
         if len(sys.argv) > 1:
@@ -37,6 +39,8 @@ client = MyClient()
 async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     print('------')
+
+music_grp = app_commands.Group(name="music", description="Музычка")
 
 @client.tree.command()
 async def gayme(interaction: discord.Interaction):
@@ -81,7 +85,7 @@ async def gaymeedit(interaction: discord.Interaction, name: str, player_count: a
         player_count = sel_gayme.count
     res = edit_gayme(name, interaction.guild_id, player_count, roleid)
     if res:
-        await interaction.response.send_message(content="Игра успешно обновлена!")
+        await interaction.response.send_message(content=f"**{name}** успешно обновлена!")
     else:
         await interaction.response.send_message(content="Ошибка при обновлении.")
 
@@ -109,5 +113,72 @@ async def pidorrole(interaction: discord.Interaction, role: discord.Role = None)
             await interaction.response.send_message(content=f"Роль изменена на {role.mention}")
     else:
         await interaction.response.send_message(content="Ошибка выполнения.")
+
+@music_grp.command(name="play")
+@app_commands.describe(link="Ссылка или запрос")
+async def music_play(interaction: discord.Interaction, link: str):
+    """Добавить песню в очередь"""
+    if (player := client.music.get_player(interaction.guild)) is None:
+        if not (voice := interaction.user.voice) is None:
+            player = await client.music.connect(voice.channel)
+        else:
+            return await interaction.response.send_message("Вы не в голосовом канале!",delete_after=30)
+    res = await player.queue(link)
+    await interaction.response.send_message(f"[{res['title']}]({res['url']}) добавлено в очередь")
+
+@music_grp.command(name="pause")
+async def music_pause(interaction: discord.Interaction):
+    """Поставить на паузу"""
+    if (player := client.music.get_player(interaction.guild)) is None:
+        return await interaction.response.send_message("Ничего не играет!",delete_after=30)
+    player.pause()
+    await interaction.response.send_message("Поставлено на паузу.",delete_after=30)
+
+@music_grp.command(name="resume")
+async def music_resume(interaction: discord.Interaction):
+    """Продолжить воспроизведение"""
+    if (player := client.music.get_player(interaction.guild)) is None:
+        return await interaction.response.send_message("Ничего не играет!",delete_after=30)
+    player.resume()
+    await interaction.response.send_message("Продолжаю.",delete_after=30)
+ 
+@music_grp.command(name="skip")
+async def music_skip(interaction: discord.Interaction):
+    """Включить следующую песню"""
+    if (player := client.music.get_player(interaction.guild)) is None:
+        return await interaction.response.send_message("Ничего не играет!",delete_after=30)
+    player.skip()
+    await interaction.response.send_message("Включаю следующую...",delete_after=30)
+
+@music_grp.command(name="volume")
+@app_commands.describe(volume="Громкость")
+async def music_volume(interaction: discord.Interaction, volume: app_commands.Range[int,1,100]):
+    """Установить громкость"""
+    if (player := client.music.get_player(interaction.guild)) is None:
+        return await interaction.response.send_message("Ничего не играет!",delete_after=30)
+    player.set_volume(volume / 100)
+    await interaction.response.send_message(f"Громкость установлена на {volume}",delete_after=30)
+
+@music_grp.command(name="stop")
+async def music_stop(interaction: discord.Interaction):
+    """Остановить музыку"""
+    if client.music.get_player(interaction.guild) is None:
+        return await interaction.response.send_message("Ничего не играет!",delete_after=30)
+    await client.music.destroy_player(interaction.guild)
+    await interaction.response.send_message("Музыка выключена.",delete_after=30)
+
+@music_grp.command(name="now")
+async def music_now(interaction: discord.Interaction):
+    if client.music.get_player(interaction.guild) is None:
+        return await interaction.response.send_message("Ничего не играет!",delete_after=30)
+    await interaction.response.send_message(embed=await client.music.now(interaction.guild))
+
+@music_grp.command(name="queue")
+async def music_queue(interaction: discord.Interaction):
+    if client.music.get_player(interaction.guild) is None:
+        return await interaction.response.send_message("Ничего не играет!",delete_after=30)
+    await interaction.response.send_message(embed=await client.music.queue(interaction.guild))
+
+client.tree.add_command(music_grp)
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())
