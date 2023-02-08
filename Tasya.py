@@ -169,12 +169,14 @@ async def music_stop(interaction: discord.Interaction):
 
 @music_grp.command(name="now")
 async def music_now(interaction: discord.Interaction):
+    """Что сейчас играет"""
     if client.music.get_player(interaction.guild) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     await interaction.response.send_message(embed=await client.music.now(interaction.guild))
 
 @music_grp.command(name="queue")
 async def music_queue(interaction: discord.Interaction):
+    """Очередь песен"""
     if client.music.get_player(interaction.guild) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     await interaction.response.send_message(embed=await client.music.queue(interaction.guild))

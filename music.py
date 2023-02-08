@@ -2,7 +2,9 @@
 
 import asyncio
 import discord
+import json
 import os
+from datetime import date
 from functools import partial
 from youtube_dl import YoutubeDL
 
@@ -39,6 +41,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.duration = data.get('duration')
         self.id = data.get('id')
         self.thumbnail = data.get('thumbnail')
+        # self.like_count = data.get('like_count')
+        self.view_count = data.get('view_count')
 
     def __getitem__(self, item: str):
         """Allows us to access attributes similar to a dict.
@@ -53,18 +57,27 @@ class YTDLSource(discord.PCMVolumeTransformer):
         to_run = partial(ytdl.extract_info, url=url, download=False)
         data = await loop.run_in_executor(None, to_run)
 
+        # data.pop('formats')
+        # data.pop('automatic_captions')
+        # print(json.dumps(data,indent=2))
+
+        # playlist extraction
         if 'entries' in data:
             data = data['entries'][0]
-        return {'url': data['webpage_url'], 'title': data['title'], 'channel': data['channel'], 'upload_date': data['upload_date'], 'duration':  data['duration'], 'id': data['id'], 'thumbnail': data['thumbnail']}
+
+        return {'url': data['webpage_url'], 'title': data['title'], 'channel': data['channel'], 
+                'upload_date': data['upload_date'], 'duration':  data['duration'], 
+                'view_count': data['view_count'], #'like_count': data['like_count'],
+                'id': data['id'], 'thumbnail': data['thumbnail']}
 
     @classmethod
     async def regather_stream(cls, data):
         loop = asyncio.get_running_loop()
 
         to_run = partial(ytdl.extract_info, url=data['url'], download=False)
-        data = await loop.run_in_executor(None, to_run)
+        stream_data = await loop.run_in_executor(None, to_run)
 
-        return cls(discord.FFmpegPCMAudio(data['url']), data=data)
+        return cls(discord.FFmpegPCMAudio(stream_data['url']), data=data)
 
 class MusicController:
     def __init__(self):
@@ -108,12 +121,18 @@ class MusicController:
         now_data = await player.now()
         embed = discord.Embed()
         embed.title = now_data['title']
+        embed.url = now_data['url']
         embed.color = discord.Color.red()
-        embed.add_field(name="Автор",value=now_data['channel'])
-        embed.add_field(name="Дата выхода",value=now_data['upload_date'])
-        embed.add_field(name="Длительность",value=f"{now_data['duration']} c.")
-        embed.set_thumbnail(url=now_data['thumbnail'])
-        print(now_data)
+        embed.add_field(name="**Автор**",value=now_data['channel'],inline=False)
+        embed.add_field(name="**Длительность**",value=(f"{str(now_data['duration'] // 3600) + ':' if now_data['duration'] > 3600 else ''}"
+                                                   f"{now_data['duration'] % 3600 // 60:02}:"
+                                                   f"{now_data['duration'] % 60:02}")
+                                                   ,inline=False)
+        embed.add_field(name="Дата выхода",value=f"{date.fromisoformat(now_data['upload_date']):%d.%m.%Y}",inline=False)
+        embed.add_field(name="Просмотры",value=f"{now_data['view_count']:,}")
+        # embed.add_field(name="Лайки",value=now_data['like_count'])
+        
+        embed.set_image(url=now_data['thumbnail'])
         return embed
 
     async def queue(self,guild):
