@@ -210,7 +210,6 @@ async def on_message(message):
         if not ref is None:
             ref = ref.author
     if "Тася" in message.content or ref == client.user:
-        chatlog = ""
         messages = [message async for message in message.channel.history(limit=50)]
         cntr_you = 0
         cont = ""
@@ -225,7 +224,7 @@ async def on_message(message):
             if cntr_you > 14:
                 break
         async with message.channel.typing():
-            resp = await generate(config.chardef,config.exdialog,chatlog)
+            resp = await generate(config.chardef,config.exdialog,cont)
         await message.channel.send(resp)
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())
