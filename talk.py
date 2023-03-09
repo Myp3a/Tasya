@@ -19,7 +19,7 @@ async def generate(chardef, exdialog, history):
             print("---")
             print((await resp.json())["data"][0][-200:])
             print("---")
-            said = re.findall(r'(?:Tasya: )(.*)', (await resp.json())["data"][0])
+            said = re.findall(r'(?:Tasya:)(.*)', (await resp.json())["data"][0])
             # print(said[-1])
             return translate(said[-1],"en","ru")
             # print("\nTasya: " + said[-1] + "\n")
