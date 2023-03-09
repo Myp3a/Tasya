@@ -1,3 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 bot_token = 'token_goes_here'
+
+# PygmalionAI
+chardef = ""
+exdialog = ""
+scenario = ""
+pygip = "localhost"
+pygport = "7860"

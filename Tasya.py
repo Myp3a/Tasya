@@ -15,6 +15,7 @@ from discord import app_commands
 from gayme import GaymeView, add_gayme, edit_gayme, get_gaymes
 from pidor import select_gay, gay_stats, set_gay_role
 from music import MusicController
+from talk import generate
 
 coloredlogs.install(level='INFO',fmt='[{asctime}] [{levelname:<8}] {name}: {message}', style='{', datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -182,5 +183,49 @@ async def music_queue(interaction: discord.Interaction):
     await interaction.response.send_message(embed=await client.music.queue(interaction.guild))
 
 client.tree.add_command(music_grp)
+
+# @client.tree.command()
+# async def say(interaction: discord.Interaction):
+#     """Попизди мне тут."""
+#     chatlog = ""
+#     messages = [message async for message in interaction.channel.history(limit=50)]
+#     for message in messages[::-1]:
+#         name = "You"
+#         if message.author == client.user:
+#             name = "Tasya"
+#         text = message.clean_content.replace("\n"," ")
+#         chatlog += f"{name}: {text}\n"
+#     chatlog = chatlog.strip()
+#     await interaction.response.defer(thinking=True)
+#     resp = await generate(config.chardef,config.exdialog,chatlog)
+#     await interaction.followup.send(resp)
+    
+@client.event
+async def on_message(message):
+    if message.author == client.user:
+        return
+    ref = message.reference
+    if not ref is None:
+        ref = ref.resolved
+        if not ref is None:
+            ref = ref.author
+    if "Тася" in message.content or ref == client.user:
+        chatlog = ""
+        messages = [message async for message in message.channel.history(limit=50)]
+        cntr_you = 0
+        cont = ""
+        for message in messages:
+            text = message.clean_content.replace("\n", " ")
+            if message.author == client.user:
+                name = "Tasya"
+            else:
+                name = "You"
+                cntr_you += 1
+            cont = name + ": " + text + "\n" + cont
+            if cntr_you > 14:
+                break
+        async with message.channel.typing():
+            resp = await generate(config.chardef,config.exdialog,chatlog)
+        await message.channel.send(resp)
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())
