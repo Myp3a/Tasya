@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 bot_token = 'token_goes_here'
+deepl_key = "token_goes_here"
 
 # PygmalionAI
 chardef = ""
