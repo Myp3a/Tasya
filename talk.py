@@ -19,7 +19,10 @@ async def generate(chardef, exdialog, history):
 
     req_json = {"prompt":prompt, 'early_stopping': True}
     print(prompt)
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600)) as session:
-        async with session.post("http://"+config.pygip+":"+config.pygport+"/api/v1/generate", json=req_json) as resp:
-            text = fix_name((await resp.json())['results'][0]['text'])
-            return await translate(text,"en","ru")
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600)) as session:
+            async with session.post("http://"+config.pygip+":"+config.pygport+"/api/v1/generate", json=req_json) as resp:
+                text = fix_name((await resp.json())['results'][0]['text'])
+                return await translate(text,"en","ru")
+    except:
+        return "Иди нахер, животное. Я отдыхаю."
