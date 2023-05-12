@@ -210,12 +210,12 @@ async def on_message(message):
         if not ref is None:
             ref = ref.author
     if "Тася" in message.content or ref == client.user:
-        messages = [message async for message in message.channel.history(limit=50)]
+        messages = [hist_message async for hist_message in message.channel.history(limit=50)]
         cntr_you = 0
         cont = ""
-        for message in messages:
-            text = message.clean_content.replace("\n", " ")
-            if message.author == client.user:
+        for hist_message in messages:
+            text = hist_message.clean_content.replace("\n", " ")
+            if hist_message.author == client.user:
                 name = "Tasya"
             else:
                 name = "You"
@@ -225,6 +225,6 @@ async def on_message(message):
                 break
         async with message.channel.typing():
             resp = await generate(config.chardef,config.exdialog,cont)
-        await message.channel.send(resp)
+        await message.reply(resp)
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())
