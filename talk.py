@@ -18,7 +18,7 @@ async def generate(chardef, exdialog, history):
     prompt = chardef + exdialog + history_en + "\nTasya:"
 
     req_json = {"prompt":prompt, 'early_stopping': True}
-    print(prompt)
+
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600)) as session:
             async with session.post("http://"+config.pygip+":"+config.pygport+"/api/v1/generate", json=req_json) as resp:
