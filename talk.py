@@ -17,7 +17,7 @@ async def generate(chardef, exdialog, history):
 
     prompt = chardef + exdialog + history_en + "\nTasya:"
 
-    req_json = {"prompt":prompt, 'early_stopping': True}
+    req_json = {"prompt":prompt, "max_context_length":2048, "max_length":150, "quiet": True}
 
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600)) as session:
