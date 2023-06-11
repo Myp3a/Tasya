@@ -216,15 +216,15 @@ async def on_message(message):
         for hist_message in messages:
             text = hist_message.clean_content.replace("\n", " ")
             if hist_message.author == client.user:
-                name = "Tasya"
+                name = "<|model|>"
             else:
-                name = "You"
+                name = "<|user|>"
                 cntr_you += 1
             cont = name + ": " + text + "\n" + cont
             if cntr_you > 14:
                 break
         async with message.channel.typing():
-            resp = await generate(config.chardef,config.exdialog,cont)
+            resp = await generate(config.prompt,cont)
         await message.reply(resp)
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())

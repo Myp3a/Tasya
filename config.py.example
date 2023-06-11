@@ -4,8 +4,6 @@ bot_token = 'token_goes_here'
 deepl_key = "token_goes_here"
 
 # PygmalionAI
-chardef = ""
-exdialog = ""
-scenario = ""
+prompt = ""
 pygip = "localhost"
 pygport = "7860"
