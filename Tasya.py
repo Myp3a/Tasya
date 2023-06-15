@@ -16,6 +16,7 @@ from gayme import GaymeView, add_gayme, edit_gayme, get_gaymes
 from pidor import select_gay, gay_stats, set_gay_role
 from music import MusicController
 from talk import generate
+from stt import recognize
 
 coloredlogs.install(level='INFO',fmt='[{asctime}] [{levelname:<8}] {name}: {message}', style='{', datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -204,6 +205,11 @@ client.tree.add_command(music_grp)
 async def on_message(message):
     if message.author == client.user:
         return
+    for att in message.attachments:
+        if att.filename == "voice-message.ogg":
+            spoken_text = await recognize(await att.read())
+            if spoken_text != "":
+                await message.reply(spoken_text)
     ref = message.reference
     if not ref is None:
         ref = ref.resolved
