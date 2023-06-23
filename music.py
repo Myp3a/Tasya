@@ -51,10 +51,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return self.__getattribute__(item)
 
     @classmethod
-    async def create_source(cls, url):
+    async def create_source(cls, url, download=True):
         loop = asyncio.get_running_loop()
 
-        to_run = partial(ytdl.extract_info, url=url, download=False)
+        to_run = partial(ytdl.extract_info, url=url, download=True)
         data = await loop.run_in_executor(None, to_run)
 
         # data.pop('formats')
@@ -64,17 +64,21 @@ class YTDLSource(discord.PCMVolumeTransformer):
         # playlist extraction
         if 'entries' in data:
             data = data['entries'][0]
-
-        return {'url': data['webpage_url'], 'title': data['title'], 'channel': data['channel'], 
-                'upload_date': data['upload_date'], 'duration':  data['duration'], 
-                'view_count': data['view_count'], #'like_count': data['like_count'],
-                'id': data['id'], 'thumbnail': data['thumbnail']}
+        if download:
+            source = ytdl.prepare_filename(data)
+        else:
+            return {'url': data['webpage_url'], 'title': data['title'], 'channel': data['channel'], 
+                    'upload_date': data['upload_date'], 'duration':  data['duration'], 
+                    'view_count': data['view_count'], #'like_count': data['like_count'],
+                    'id': data['id'], 'thumbnail': data['thumbnail']}
+        
+        return cls(discord.FFmpegPCMAudio(source), data=data)
 
     @classmethod
     async def regather_stream(cls, data):
         loop = asyncio.get_running_loop()
 
-        to_run = partial(ytdl.extract_info, url=data['url'], download=False)
+        to_run = partial(ytdl.extract_info, url=data['url'], download=True)
         stream_data = await loop.run_in_executor(None, to_run)
 
         return cls(discord.FFmpegPCMAudio(stream_data['url']), data=data)
@@ -172,7 +176,7 @@ class Player:
                 self.destroyed.set()
                 continue
 
-            source = await YTDLSource.regather_stream(source)
+            source = await YTDLSource.create_source(source)
 
             source.volume = self.volume
             self.current = source
