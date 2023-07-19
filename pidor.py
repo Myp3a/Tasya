@@ -123,6 +123,8 @@ async def select_gay(guild: discord.Guild):
             await member.remove_roles(gay_role)
     await gay.add_roles(gay_role)
     res = [random.choice(line) for line in lines]
+    res[0] = '*' + res[0] + '*'
+    res[1] = '*' + res[1] + '*'
     res[3] += gay.mention
     with conn:
         conn.execute("INSERT INTO gays VALUES (?,?,?,?,?)",(gay.id, date.day, date.month, date.year, guild.id))
