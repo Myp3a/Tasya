@@ -4,6 +4,7 @@
 from typing import Literal, Union, NamedTuple
 from enum import Enum
 
+import asyncio
 import coloredlogs
 import logging
 import config
@@ -28,6 +29,7 @@ class MyClient(discord.Client):
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
         self.music = MusicController()
+        self.talk_lock = asyncio.Lock()
 
     async def setup_hook(self):
         if len(sys.argv) > 1:
@@ -230,7 +232,7 @@ async def on_message(message):
             if cntr_you > 14:
                 break
         async with message.channel.typing():
-            resp = await generate(config.prompt,cont)
+            resp = await generate(config.prompt,cont,client.talk_lock)
         await message.reply(resp)
 
 client.run(config.bot_token,log_level=logging.DEBUG,log_handler=logging.NullHandler())
