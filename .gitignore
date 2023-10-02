@@ -4,3 +4,4 @@ data.db
 .venv
 PidorStats
 dbmove.py
+tmp/

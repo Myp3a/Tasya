@@ -24,6 +24,8 @@ from image import caption
 
 coloredlogs.install(level='INFO',fmt='[{asctime}] [{levelname:<8}] {name}: {message}', style='{', datefmt='%Y-%m-%d %H:%M:%S')
 
+logger = logging.getLogger('main')
+
 class MyClient(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
@@ -37,6 +39,7 @@ class MyClient(discord.Client):
     async def setup_hook(self):
         if len(sys.argv) > 1:
             if sys.argv[1] == '-u':
+                logger.warning("Syncing command tree")
                 await self.tree.sync()
 
 
@@ -44,14 +47,15 @@ client = MyClient()
 
 @client.event
 async def on_ready():
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
-    print('------')
+    logger.info(f'Logged in as {client.user} (ID: {client.user.id})')
+    logger.info('------')
 
 music_grp = app_commands.Group(name="music", description="Музычка")
 
 @client.tree.command()
 async def gayme(interaction: discord.Interaction):
     """Поиграть с друзьяшками"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /gayme")
     view = GaymeView(interaction.guild_id)
     if len(view.gaymes) == 0:
         await interaction.response.send_message(content="Сначала добавь хоть одну игру!")
@@ -62,6 +66,7 @@ async def gayme(interaction: discord.Interaction):
 @app_commands.describe(name="Название игры", player_count="Необходимое количество игроков", role="Роль, которую пингуем при сборе")
 async def gaymeadd(interaction: discord.Interaction, name: str, player_count: app_commands.Range[int, 2, 20], role: discord.Role = None):
     """Добавить новую игру в список"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /gaymeadd")
     if role is None:
         roleid = None
     else:
@@ -76,6 +81,7 @@ async def gaymeadd(interaction: discord.Interaction, name: str, player_count: ap
 @app_commands.describe(name="Название игры", player_count="Необходимое количество игроков", role="Роль, которую пингуем при сборе")
 async def gaymeedit(interaction: discord.Interaction, name: str, player_count: app_commands.Range[int, 2, 20] = None, role: discord.Role = None):
     """Отредактировать игру"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /gaymeedit")
     gaymes = get_gaymes(interaction.guild_id)
     sel_gayme = None
     for gayme in gaymes:
@@ -100,6 +106,7 @@ async def gaymeedit(interaction: discord.Interaction, name: str, player_count: a
 @app_commands.describe(period="Период статистики")
 async def pidor(interaction: discord.Interaction, period: Literal["Месяц", "Год", "Все время"] = None):
     """Выборы, выборы - кандидаты - пидоры!"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /pidor")
     if period is None:
         res = await select_gay(interaction.guild)
         await interaction.response.send_message(content=res[0])
@@ -113,6 +120,7 @@ async def pidor(interaction: discord.Interaction, period: Literal["Месяц", 
 @app_commands.describe(role="Роль для пидора")
 async def pidorrole(interaction: discord.Interaction, role: discord.Role = None):
     """Званием пидора объявляется..."""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /pidorrole")
     if set_gay_role(interaction.guild, role):
         if role is None:
             await interaction.response.send_message(content=f"Роль удалена.")
@@ -125,6 +133,7 @@ async def pidorrole(interaction: discord.Interaction, role: discord.Role = None)
 @app_commands.describe(link="Ссылка или запрос")
 async def music_play(interaction: discord.Interaction, link: str):
     """Добавить песню в очередь"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /music play")
     if (player := client.music.get_player(interaction.guild)) is None:
         if not (voice := interaction.user.voice) is None:
             player = await client.music.connect(voice.channel)
@@ -136,6 +145,7 @@ async def music_play(interaction: discord.Interaction, link: str):
 @music_grp.command(name="pause")
 async def music_pause(interaction: discord.Interaction):
     """Поставить на паузу"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /music pause")
     if (player := client.music.get_player(interaction.guild)) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     player.pause()
@@ -144,6 +154,7 @@ async def music_pause(interaction: discord.Interaction):
 @music_grp.command(name="resume")
 async def music_resume(interaction: discord.Interaction):
     """Продолжить воспроизведение"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /music resume")
     if (player := client.music.get_player(interaction.guild)) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     player.resume()
@@ -152,6 +163,7 @@ async def music_resume(interaction: discord.Interaction):
 @music_grp.command(name="skip")
 async def music_skip(interaction: discord.Interaction):
     """Включить следующую песню"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /music skip")
     if (player := client.music.get_player(interaction.guild)) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     player.skip()
@@ -161,6 +173,7 @@ async def music_skip(interaction: discord.Interaction):
 @app_commands.describe(volume="Громкость")
 async def music_volume(interaction: discord.Interaction, volume: app_commands.Range[int,1,100]):
     """Установить громкость"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /music volume")
     if (player := client.music.get_player(interaction.guild)) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     player.set_volume(volume / 100)
@@ -169,6 +182,7 @@ async def music_volume(interaction: discord.Interaction, volume: app_commands.Ra
 @music_grp.command(name="stop")
 async def music_stop(interaction: discord.Interaction):
     """Остановить музыку"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /music stop")
     if client.music.get_player(interaction.guild) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     await client.music.destroy_player(interaction.guild)
@@ -177,6 +191,7 @@ async def music_stop(interaction: discord.Interaction):
 @music_grp.command(name="now")
 async def music_now(interaction: discord.Interaction):
     """Что сейчас играет"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /music now")
     if client.music.get_player(interaction.guild) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     await interaction.response.send_message(embed=await client.music.now(interaction.guild))
@@ -184,6 +199,7 @@ async def music_now(interaction: discord.Interaction):
 @music_grp.command(name="queue")
 async def music_queue(interaction: discord.Interaction):
     """Очередь песен"""
+    logger.info(f"({interaction.guild.name}) {interaction.user.display_name} used /music queue")
     if client.music.get_player(interaction.guild) is None:
         return await interaction.response.send_message("Ничего не играет!",delete_after=30)
     await interaction.response.send_message(embed=await client.music.queue(interaction.guild))
@@ -209,9 +225,11 @@ client.tree.add_command(music_grp)
 @client.event
 async def on_message(message):
     if message.author == client.user:
+        logger.info(f"({message.guild.name}) {client.user.display_name}: {message.content}")
         return
     for att in message.attachments:
         if att.filename == "voice-message.ogg":
+            logger.info(f"({message.guild.name}) {message.author.display_name}: *voice message*")
             spoken_text = await recognize(await att.read())
             if spoken_text != "":
                 await message.reply(spoken_text)
@@ -221,6 +239,8 @@ async def on_message(message):
         if not ref is None:
             ref = ref.author
     if "Тася" in message.content or ref == client.user:
+        logger.info(f"({message.guild.name}) {message.author.display_name}: {message.content}")
+        logger.info("I was mentioned")
         messages = [hist_message async for hist_message in message.channel.history(limit=50)]
         cntr_you = 0
         cont = ""

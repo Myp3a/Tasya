@@ -4,9 +4,12 @@ import asyncio
 import discord
 import json
 import os
+import logging
 from datetime import date
 from functools import partial
 from youtube_dl import YoutubeDL
+
+logger = logging.getLogger("music")
 
 ytdlopts = {
     'format': 'bestaudio/best',
@@ -85,6 +88,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 class MusicController:
     def __init__(self):
+        self.logger = logging.getLogger("music.controller")
         self.players = {}
         if not os.path.exists("tmp"):
             os.makedirs("tmp")
@@ -93,6 +97,7 @@ class MusicController:
         player = Player(voice)
         asyncio.get_running_loop().create_task(self.destruct_after_timeout(voice.guild,player))
         self.players[voice.guild.id] = player
+        self.logger.info(f"Created player for guild {voice.guild.name}")
         return player
 
     def get_player(self,guild):
@@ -111,18 +116,22 @@ class MusicController:
         player.stop()
         await player.voice_client.disconnect()
         self.players.pop(guild.id, None)
+        self.logger.info(f"Destroyed player for guild {guild.name}")
 
     async def connect(self,voice):
         if (player := self.get_player(voice.guild)) is None:
             vc = await voice.connect()
             return self.create_player(vc)
         await player.voice_client.move_to(voice)
+        self.logger.info(f"Connected to voice in guild {voice.guild.name}")
         return player
 
     async def now(self,guild):
         if (player := self.players.get(guild.id, None)) is None:
+            self.logger.warning(f"Asked for playing song, but no player found in guild {guild.name}")
             return
         now_data = await player.now()
+        self.logger.info("Parsing current song")
         embed = discord.Embed()
         embed.title = now_data['title']
         embed.url = now_data['url']
@@ -141,11 +150,13 @@ class MusicController:
 
     async def queue(self,guild):
         if (player := self.players.get(guild.id, None)) is None:
+            self.logger.warning(f"No player found in guild {guild.name}, queue doesn't exist")
             return
         embed = discord.Embed()
         embed.title = "Очередь"
         embed.color = discord.Color.red()
         queue_text = ""
+        self.logger.info(f"Parsing play queue in guild {guild.name}")
         for song in await player.queue_info():
             queue_text += f"[{song['title']}]({song['url']})\n"
         if queue_text != "":
@@ -154,6 +165,7 @@ class MusicController:
 
 class Player:
     def __init__(self,voice_client):
+        self.logger = logging.getLogger("music.player")
         self._queue = asyncio.Queue()
         self.next = asyncio.Event()
         self.playing = asyncio.Event()
@@ -165,6 +177,7 @@ class Player:
     async def loop(self):
         while True:
             if self.destroyed.is_set():
+                self.logger.debug("Destroyed bit set, exiting loop")
                 return
             self.next.clear()
             
@@ -182,6 +195,7 @@ class Player:
             self.current = source
 
             self.voice_client.play(source, after=lambda _: self.next.set())
+            self.logger.debug("Playing next song")
 
             await self.next.wait()
 
@@ -190,6 +204,7 @@ class Player:
             self.playing.clear()
 
     async def queue(self,link):
+        self.logger.debug(f"Enqueueing {link}")
         src = await YTDLSource.create_source(link)
         await self._queue.put(src)
         return src
@@ -215,26 +230,31 @@ class Player:
             return
         
     def pause(self):
+        self.logger.debug("Pausing playback")
         if not self.voice_client.is_paused():
             self.voice_client.pause()
             self.playing.clear()
             asyncio.get_running_loop().create_task(self._pause_watcher())
 
     def resume(self):
+        self.logger.debug("Resuming playback")
         if self.voice_client.is_paused():
             self.voice_client.resume()
             self.playing.set()
         
     def stop(self):
+        self.logger.debug("Stopping playback")
         for _ in range(self._queue.qsize()):
             self._queue.get_nowait()
             self._queue.task_done()
         self.voice_client.stop()
 
     def skip(self):
+        self.logger.debug("Skipping to next song")
         if self.playing.is_set():
             self.voice_client.stop()
 
     def set_volume(self,volume):
+        self.logger.debug(f"Changing volume to {volume}")
         if self.voice_client.source:
             self.voice_client.source.volume = volume

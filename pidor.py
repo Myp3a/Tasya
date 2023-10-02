@@ -2,6 +2,9 @@ import sqlite3
 import discord
 import random
 import datetime
+import logging
+
+logger = logging.getLogger("pidor")
 
 conn = sqlite3.connect("data.db")
 with conn:
@@ -104,6 +107,7 @@ async def select_gay(guild: discord.Guild):
         "Я нашла пидора дня, но он сбежал отсюда (Вот пидор!), так что попробуйте еще раз.",
     ]
 
+    logger.info(f"Selecting a gay in {guild.name}")
     date = datetime.date.today()
     members = guild.members
     gay_data = None
@@ -112,7 +116,9 @@ async def select_gay(guild: discord.Guild):
     if gay_data is not None:
         gay = next((gay for gay in members if gay.id == gay_data[0]), None)
         if gay is None:
+            logger.info("Gay ran away")
             return [random.choice(ranaway),]
+        logger.info("Gay already selected")
         return [random.choice(already) + gay.mention,]
     gay = random.choice(members)
     for res in conn.execute("SELECT role FROM gay_config WHERE server=?",(guild.id,)):
@@ -120,7 +126,9 @@ async def select_gay(guild: discord.Guild):
     gay_role = guild.get_role(role_id)
     for member in members:
         if gay_role in member.roles:
+            logger.info(f"Removing role {gay_role.name} from {member.display_name}")
             await member.remove_roles(gay_role)
+    logger.info(f"Adding role {gay_role.name} to {gay.display_name}")
     await gay.add_roles(gay_role)
     res = [random.choice(line) for line in lines]
     res[0] = '*' + res[0] + '*'
@@ -128,6 +136,7 @@ async def select_gay(guild: discord.Guild):
     res[3] += gay.mention
     with conn:
         conn.execute("INSERT INTO gays VALUES (?,?,?,?,?)",(gay.id, date.day, date.month, date.year, guild.id))
+        logger.info("Gay DB updated")
     return res
 
 def gay_stats(guild, period):
@@ -154,6 +163,7 @@ def gay_stats(guild, period):
         "экстремистких транспарантов",
         "прибытий в военкомат"
     ]
+    logger.info(f"Asked for stats in {guild.name} for period {period}")
     date = datetime.date.today()
     match period:
         case "Месяц":
@@ -201,6 +211,7 @@ def gay_stats(guild, period):
                                         GROUP BY user_id 
                                         ORDER BY count(user_id) DESC""",(guild.id,)):
                 gays.append(gay)
+    logger.info(f"Got {len(gays)} gays from DB")
     embeds = []
     embed = discord.Embed()
     embed.title = random.choice(titles)
@@ -215,6 +226,7 @@ def gay_stats(guild, period):
         gay_list += f"<@{gay[0]}>\n"
         count_list += f"{gay[1]} {random.choice(gay_texts)}\n"
         if len(gay_list) > 950 or len(count_list) > 950:
+            logger.info("Embed overflow")
             embed.add_field(name="Пидоры",value=gay_list,inline=True)
             embed.add_field(name="Количество",value=count_list,inline=True)
             embeds.append(embed)
@@ -233,6 +245,8 @@ def set_gay_role(guild, role):
         with conn:
             conn.execute("INSERT OR IGNORE INTO gay_config VALUES (?,?)",(guild.id, role.id))
             conn.execute("UPDATE gay_config SET role=? WHERE server=?",(role.id, guild.id))
+        logger.info(f"Updated gay role in {guild.name} to {role.name}")
         return True
     except:
+        logger.info(f"Failed to update gay role in {guild.name}")
         return False

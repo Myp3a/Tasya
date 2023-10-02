@@ -1,5 +1,8 @@
 import aiohttp
 import config
+import logging
+
+logger = logging.getLogger("stt")
 
 async def recognize(attachment_bytes):
     async with aiohttp.ClientSession() as sess:
@@ -7,4 +10,5 @@ async def recognize(attachment_bytes):
                              data=attachment_bytes, headers={"Authorization":f"Api-Key {config.yandex_stt_token}"}) as resp:
             res = await resp.json()
             spoken = res["result"]
+            logger.info(f"Recognized text: {spoken}")
             return spoken

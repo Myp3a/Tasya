@@ -2,6 +2,9 @@ import discord
 from enum import Enum
 import datetime
 import sqlite3
+import logging
+
+logger = logging.getLogger("gayme")
 
 conn = sqlite3.connect("data.db")
 with conn:
@@ -45,6 +48,7 @@ class GaymeDropdown(discord.ui.Select):
         view.add_item(GaymeRejectButton(row=1))
         view.add_item(GaymePingButton(row=2))
         await interaction.response.edit_message(embed=self.view.embed,view=self.view)
+        logger.info(f"Created gathering for gayme {gayme.name}")
         if view.gayme.role is not None:
             await interaction.channel.send(content=f"<@&{view.gayme.role}> - собираемся!")
         view.message = await interaction.original_response()
@@ -64,6 +68,7 @@ class GaymeView(discord.ui.View):
         self.message = None
 
     async def on_timeout(self):
+        logger.info(f"Ended gathering for gayme {self.gayme.name}")
         self.clear_items().stop()
         await self.message.edit(view=self)
 
@@ -72,6 +77,7 @@ class GaymePingButton(discord.ui.Button):
         super().__init__(style=discord.ButtonStyle.primary,label="Труба зовет!",row=row)
 
     async def callback(self, interaction: discord.Interaction):
+        logger.info(f"{interaction.user.display_name} pressed gather button")
         if len(self.view.accepted) < self.view.gayme.count:
             await interaction.response.send_message(content="Нас мало, куда трубить?",ephemeral=True,delete_after=10)
             return
@@ -88,6 +94,7 @@ class GaymeAcceptButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         user: discord.Member = interaction.user
         view: GaymeView = self.view
+        logger.info(f"{user.display_name} applied for game {view.gayme.name}")
         if user.id in view.accepted:
             await interaction.response.send_message(content="Ты уже в игре!",ephemeral=True,delete_after=10)
             return
@@ -106,6 +113,7 @@ class GaymeRejectButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         user: discord.Member = interaction.user
         view: GaymeView = self.view
+        logger.info(f"{user.display_name} rejected game {view.gayme.name}")
         if user.id in view.rejected:
             await interaction.response.send_message(content="Ты уже отказался!",ephemeral=True,delete_after=10)
             return
@@ -124,6 +132,7 @@ class GaymeMaybeButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         user: discord.Member = interaction.user
         view: GaymeView = self.view
+        logger.info(f"{user.display_name} thinking about game {view.gayme.name}")
         if user.id in view.notdecided:
             await interaction.response.send_message(content="Ты все еще думаешь!",ephemeral=True,delete_after=10)
             return
@@ -176,6 +185,7 @@ def get_gaymes(guild):
     gaymes = []
     for res in conn.execute("SELECT rowid, name, players, role FROM gaymes WHERE server = ?",(guild,)):
         gaymes.append(Gayme(*res))
+    logger.info(f"Parsed {len(gaymes)} gaymes from DB")
     return gaymes
 
 def add_gayme(name, count, role, guild):
@@ -185,11 +195,14 @@ def add_gayme(name, count, role, guild):
             for res in conn.execute("SELECT name FROM gaymes WHERE server=? AND name=?",(guild,name)):
                 cnt += 1
             if cnt > 0:
+                logger.warning("Gayme already exists")
                 return False
             with conn:
                 conn.execute("INSERT INTO gaymes(name, players, role, server) VALUES (?, ?, ?, ?)",(name, count, role, guild))
+        logger.info(f"Successfully added gayme {name} in {guild.name}")
         return True
     except:
+        logger.error(f"Failed to add gayme in guild {guild.name}")
         return False
 
 def edit_gayme(name, guild, count = 2, role = None):
@@ -199,9 +212,12 @@ def edit_gayme(name, guild, count = 2, role = None):
             for res in conn.execute("SELECT name FROM gaymes WHERE server=? AND name=?",(guild,name)):
                 cnt += 1
             if cnt == 0:
+                logger.warning("Gayme not exists")
                 return False
             with conn:
                 conn.execute("UPDATE gaymes SET players=?, role=? WHERE server=? AND name=?",(count, role, guild, name))
+        logger.info(f"Successfully edited gayme {name} in {guild.name}")
         return True
     except:
+        logger.error(f"Failed to edit gayme in guild {guild.name}")
         return False
