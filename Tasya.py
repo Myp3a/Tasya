@@ -10,6 +10,8 @@ import logging
 import config
 import datetime
 import sys
+import io
+import base64
 import discord
 from discord import app_commands
 
@@ -18,6 +20,7 @@ from pidor import select_gay, gay_stats, set_gay_role
 from music import MusicController
 from talk import generate
 from stt import recognize
+from image import caption
 
 coloredlogs.install(level='INFO',fmt='[{asctime}] [{levelname:<8}] {name}: {message}', style='{', datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -223,6 +226,13 @@ async def on_message(message):
         cont = ""
         for hist_message in messages:
             text = hist_message.clean_content.replace("\n", " ")
+            for att in hist_message.attachments:
+                if "image" in att.content_type:
+                    img_stream = io.BytesIO()
+                    await att.save(img_stream)
+                    b64_bytes = base64.b64encode(img_stream.getvalue())
+                    img_caption = await caption(b64_bytes.decode())
+                    text += "\n<|user|> shows <|model|> a picture of " + img_caption
             if hist_message.author == client.user:
                 name = "<|model|>"
             else:
