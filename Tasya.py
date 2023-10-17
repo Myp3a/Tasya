@@ -238,7 +238,7 @@ async def on_message(message):
         ref = ref.resolved
         if not ref is None:
             ref = ref.author
-    if "Тася" in message.content or ref == client.user:
+    if "Тас" in message.content or ref == client.user or client.user in message.mentions:
         logger.info(f"({message.guild.name}) {message.author.display_name}: {message.content}")
         logger.info("I was mentioned")
         messages = [hist_message async for hist_message in message.channel.history(limit=50)]
