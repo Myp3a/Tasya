@@ -252,13 +252,13 @@ async def on_message(message):
                     await att.save(img_stream)
                     b64_bytes = base64.b64encode(img_stream.getvalue())
                     img_caption = await caption(b64_bytes.decode())
-                    text += "\n<|user|> shows <|model|> a picture of " + img_caption
+                    text += "\n<|start_header_id|>model<|end_header_id|>*shows <|model|> a picture of " + img_caption + "*<|eot_id|>"
             if hist_message.author == client.user:
-                name = "<|model|>"
+                name = "<|start_header_id|>model<|end_header_id|>"
             else:
-                name = "<|user|>"
+                name = "<|start_header_id|>user<|end_header_id|>"
                 cntr_you += 1
-            cont = name + ": " + text + "\n" + cont
+            cont = name + ": " + text + "<|eot_id|>\n" + cont
             if cntr_you > 14:
                 break
         async with message.channel.typing():
