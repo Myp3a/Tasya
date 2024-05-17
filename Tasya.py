@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 # # -*- coding: utf-8 -*-
 
-from typing import Literal, Union, NamedTuple
-from enum import Enum
+from typing import Literal
 
 import asyncio
 import coloredlogs
 import logging
 import config
-import datetime
 import sys
 import io
 import base64
@@ -205,22 +203,6 @@ async def music_queue(interaction: discord.Interaction):
     await interaction.response.send_message(embed=await client.music.queue(interaction.guild))
 
 client.tree.add_command(music_grp)
-
-# @client.tree.command()
-# async def say(interaction: discord.Interaction):
-#     """Попизди мне тут."""
-#     chatlog = ""
-#     messages = [message async for message in interaction.channel.history(limit=50)]
-#     for message in messages[::-1]:
-#         name = "You"
-#         if message.author == client.user:
-#             name = "Tasya"
-#         text = message.clean_content.replace("\n"," ")
-#         chatlog += f"{name}: {text}\n"
-#     chatlog = chatlog.strip()
-#     await interaction.response.defer(thinking=True)
-#     resp = await generate(config.chardef,config.exdialog,chatlog)
-#     await interaction.followup.send(resp)
     
 @client.event
 async def on_message(message):
