@@ -49,13 +49,7 @@ async def generate_old(prompt, history, lock):
 
 # RAG wrapper
 async def generate(prompt, history, lock):
-    try:
-        history_en = fix_pipes(fix_name(await translate(history,"ru","en")))
-    except:
-        logger.error("Translation to english failed")
-        return "Иди нахер, животное. Я отдыхаю."
-    
-    req_json = {"history":history_en}
+    req_json = {"history": history, "translate": "ru"}
     try:
         async with lock:
             logger.info("Asking Pyg for response")
@@ -66,8 +60,4 @@ async def generate(prompt, history, lock):
     except:
         logger.error("Pyg error")
         return "Иди нахер, животное. Я отдыхаю."
-    try:
-        return await translate(text,"en","ru")
-    except:
-        logger.error("Translation to russian failed")
-        return "Иди нахер, животное. Я отдыхаю."
+    return text
