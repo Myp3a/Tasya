@@ -2,7 +2,6 @@
 
 import asyncio
 import discord
-import json
 import os
 import logging
 from datetime import date
@@ -12,40 +11,37 @@ from youtube_dl import YoutubeDL
 logger = logging.getLogger("music")
 
 ytdlopts = {
-    'format': 'bestaudio/best',
-    'outtmpl': 'tmp/%(extractor)s-%(id)s-%(title)s.%(ext)s',
-    'restrictfilenames': True,
-    'noplaylist': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0'
+    "format": "bestaudio/best",
+    "outtmpl": "tmp/%(extractor)s-%(id)s-%(title)s.%(ext)s",
+    "restrictfilenames": True,
+    "noplaylist": True,
+    "nocheckcertificate": True,
+    "ignoreerrors": False,
+    "logtostderr": False,
+    "quiet": True,
+    "no_warnings": True,
+    "default_search": "auto",
+    "source_address": "0.0.0.0",
 }
 
-ffmpegopts = {
-    'before_options': '-nostdin',
-    'options': '-vn'
-}
+ffmpegopts = {"before_options": "-nostdin", "options": "-vn"}
 
 ytdl = YoutubeDL(ytdlopts)
 
-class YTDLSource(discord.PCMVolumeTransformer):
 
+class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, data):
         super().__init__(source)
-        
-        self.title = data.get('title')
-        self.url = data.get('url')
-        self.channel = data.get('channel')
-        self.upload_date = data.get('upload_date')
-        self.duration = data.get('duration')
-        self.id = data.get('id')
-        self.thumbnail = data.get('thumbnail')
+
+        self.title = data.get("title")
+        self.url = data.get("url")
+        self.channel = data.get("channel")
+        self.upload_date = data.get("upload_date")
+        self.duration = data.get("duration")
+        self.id = data.get("id")
+        self.thumbnail = data.get("thumbnail")
         # self.like_count = data.get('like_count')
-        self.view_count = data.get('view_count')
+        self.view_count = data.get("view_count")
 
     def __getitem__(self, item: str):
         """Allows us to access attributes similar to a dict.
@@ -65,26 +61,33 @@ class YTDLSource(discord.PCMVolumeTransformer):
         # print(json.dumps(data,indent=2))
 
         # playlist extraction
-        if 'entries' in data:
-            data = data['entries'][0]
+        if "entries" in data:
+            data = data["entries"][0]
         if download:
             source = ytdl.prepare_filename(data)
         else:
-            return {'url': data['webpage_url'], 'title': data['title'], 'channel': data['channel'], 
-                    'upload_date': data['upload_date'], 'duration':  data['duration'], 
-                    'view_count': data['view_count'], #'like_count': data['like_count'],
-                    'id': data['id'], 'thumbnail': data['thumbnail']}
-        
+            return {
+                "url": data["webpage_url"],
+                "title": data["title"],
+                "channel": data["channel"],
+                "upload_date": data["upload_date"],
+                "duration": data["duration"],
+                "view_count": data["view_count"],  #'like_count': data['like_count'],
+                "id": data["id"],
+                "thumbnail": data["thumbnail"],
+            }
+
         return cls(discord.FFmpegPCMAudio(source), data=data)
 
     @classmethod
     async def regather_stream(cls, data):
         loop = asyncio.get_running_loop()
 
-        to_run = partial(ytdl.extract_info, url=data['url'], download=True)
+        to_run = partial(ytdl.extract_info, url=data["url"], download=True)
         stream_data = await loop.run_in_executor(None, to_run)
 
-        return cls(discord.FFmpegPCMAudio(stream_data['url']), data=data)
+        return cls(discord.FFmpegPCMAudio(stream_data["url"]), data=data)
+
 
 class MusicController:
     def __init__(self):
@@ -93,22 +96,24 @@ class MusicController:
         if not os.path.exists("tmp"):
             os.makedirs("tmp")
 
-    def create_player(self,voice):
+    def create_player(self, voice):
         player = Player(voice)
-        asyncio.get_running_loop().create_task(self.destruct_after_timeout(voice.guild,player))
+        asyncio.get_running_loop().create_task(
+            self.destruct_after_timeout(voice.guild, player)
+        )
         self.players[voice.guild.id] = player
         self.logger.info(f"Created player for guild {voice.guild.name}")
         return player
 
-    def get_player(self,guild):
+    def get_player(self, guild):
         player = self.players.get(guild.id, None)
         return player
 
-    async def destruct_after_timeout(self,guild,player):
+    async def destruct_after_timeout(self, guild, player):
         await player.destroyed.wait()
         await self.destroy_player(guild)
 
-    async def destroy_player(self,guild):
+    async def destroy_player(self, guild):
         player = self.players.get(guild.id, None)
         if player is None:
             return
@@ -118,7 +123,7 @@ class MusicController:
         self.players.pop(guild.id, None)
         self.logger.info(f"Destroyed player for guild {guild.name}")
 
-    async def connect(self,voice):
+    async def connect(self, voice):
         if (player := self.get_player(voice.guild)) is None:
             vc = await voice.connect()
             return self.create_player(vc)
@@ -126,31 +131,44 @@ class MusicController:
         self.logger.info(f"Connected to voice in guild {voice.guild.name}")
         return player
 
-    async def now(self,guild):
+    async def now(self, guild):
         if (player := self.players.get(guild.id, None)) is None:
-            self.logger.warning(f"Asked for playing song, but no player found in guild {guild.name}")
+            self.logger.warning(
+                f"Asked for playing song, but no player found in guild {guild.name}"
+            )
             return
         now_data = await player.now()
         self.logger.info("Parsing current song")
         embed = discord.Embed()
-        embed.title = now_data['title']
-        embed.url = now_data['url']
+        embed.title = now_data["title"]
+        embed.url = now_data["url"]
         embed.color = discord.Color.red()
-        embed.add_field(name="**Автор**",value=now_data['channel'],inline=False)
-        embed.add_field(name="**Длительность**",value=(f"{str(now_data['duration'] // 3600) + ':' if now_data['duration'] > 3600 else ''}"
-                                                   f"{now_data['duration'] % 3600 // 60:02}:"
-                                                   f"{now_data['duration'] % 60:02}")
-                                                   ,inline=False)
-        embed.add_field(name="Дата выхода",value=f"{date.fromisoformat(now_data['upload_date']):%d.%m.%Y}",inline=False)
-        embed.add_field(name="Просмотры",value=f"{now_data['view_count']:,}")
+        embed.add_field(name="**Автор**", value=now_data["channel"], inline=False)
+        embed.add_field(
+            name="**Длительность**",
+            value=(
+                f"{str(now_data['duration'] // 3600) + ':' if now_data['duration'] > 3600 else ''}"
+                f"{now_data['duration'] % 3600 // 60:02}:"
+                f"{now_data['duration'] % 60:02}"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Дата выхода",
+            value=f"{date.fromisoformat(now_data['upload_date']):%d.%m.%Y}",
+            inline=False,
+        )
+        embed.add_field(name="Просмотры", value=f"{now_data['view_count']:,}")
         # embed.add_field(name="Лайки",value=now_data['like_count'])
-        
-        embed.set_image(url=now_data['thumbnail'])
+
+        embed.set_image(url=now_data["thumbnail"])
         return embed
 
-    async def queue(self,guild):
+    async def queue(self, guild):
         if (player := self.players.get(guild.id, None)) is None:
-            self.logger.warning(f"No player found in guild {guild.name}, queue doesn't exist")
+            self.logger.warning(
+                f"No player found in guild {guild.name}, queue doesn't exist"
+            )
             return
         embed = discord.Embed()
         embed.title = "Очередь"
@@ -160,27 +178,28 @@ class MusicController:
         for song in await player.queue_info():
             queue_text += f"[{song['title']}]({song['url']})\n"
         if queue_text != "":
-            embed.add_field(name="Следующие песни:",value=queue_text)
+            embed.add_field(name="Следующие песни:", value=queue_text)
         return embed
 
+
 class Player:
-    def __init__(self,voice_client):
+    def __init__(self, voice_client):
         self.logger = logging.getLogger("music.player")
         self._queue = asyncio.Queue()
         self.next = asyncio.Event()
         self.playing = asyncio.Event()
         self.destroyed = asyncio.Event()
-        self.volume = .5
+        self.volume = 0.5
         self.voice_client = voice_client
         asyncio.get_running_loop().create_task(self.loop())
-    
+
     async def loop(self):
         while True:
             if self.destroyed.is_set():
                 self.logger.debug("Destroyed bit set, exiting loop")
                 return
             self.next.clear()
-            
+
             try:
                 async with asyncio.timeout(600):
                     source = await self._queue.get()
@@ -203,12 +222,12 @@ class Player:
             self.current = None
             self.playing.clear()
 
-    async def queue(self,link):
+    async def queue(self, link):
         self.logger.debug(f"Enqueueing {link}")
         src = await YTDLSource.create_source(link)
         await self._queue.put(src)
         return src
-    
+
     async def queue_info(self):
         all = []
         for i in range(self._queue.qsize()):
@@ -228,7 +247,7 @@ class Player:
         except asyncio.TimeoutError:
             self.destroyed.set()
             return
-        
+
     def pause(self):
         self.logger.debug("Pausing playback")
         if not self.voice_client.is_paused():
@@ -241,7 +260,7 @@ class Player:
         if self.voice_client.is_paused():
             self.voice_client.resume()
             self.playing.set()
-        
+
     def stop(self):
         self.logger.debug("Stopping playback")
         for _ in range(self._queue.qsize()):
@@ -254,7 +273,7 @@ class Player:
         if self.playing.is_set():
             self.voice_client.stop()
 
-    def set_volume(self,volume):
+    def set_volume(self, volume):
         self.logger.debug(f"Changing volume to {volume}")
         if self.voice_client.source:
             self.voice_client.source.volume = volume
